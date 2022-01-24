@@ -13,29 +13,61 @@
 //! then decoded from CBOR.
 
 use libc::ioctl;
+#[cfg(feature = "log")]
 use log::{debug, error};
-use nix::errno::Errno;
-use nix::request_code_readwrite;
-use nix::sys::uio::IoVec;
-use nix::unistd::close;
+#[cfg(feature = "nix")]
+use {
+    nix::errno,
+    nix::request_code_readwrite,
+    nix::unistd::close,
+};
 use nsm_io::{ErrorCode, Request, Response};
 
-use std::fs::OpenOptions;
-use std::mem;
-use std::os::unix::io::{IntoRawFd, RawFd};
+#[cfg(feature = "std")]
+use {
+    std::fs::OpenOptions,
+    std::mem,
+    std::os::unix::io::{IntoRawFd, RawFd},
+};
 
 const DEV_FILE: &str = "/dev/nsm";
 const NSM_IOCTL_MAGIC: u8 = 0x0A;
 const NSM_REQUEST_MAX_SIZE: usize = 0x1000;
 const NSM_RESPONSE_MAX_SIZE: usize = 0x3000;
 
+pub trait Platform {
+    fn open_dev() -> i32;
+    fn nsm_ioctl(fd: i32, message: &mut NsmMessage) -> Option<i32>;
+    fn close_dev(fd: i32);
+
+}
+
+#[cfg(feature = "nix")]
+pub struct Nix;
+
+#[cfg(feature = "nix")]
+impl Platform for Nix {
+    fn open_dev() -> i32 {
+        nsm_init()
+    }
+
+    fn nsm_ioctl(fd: i32, message: &mut NsmMessage) -> Option<i32> {
+        nsm_ioctl(fd, message)
+    }
+
+    fn close_dev(fd: i32) {
+        nsm_exit(fd)
+    }
+}
+
+
 /// NSM message structure to be used with `ioctl()`.
 #[repr(C)]
-struct NsmMessage<'a> {
+pub struct NsmMessage<'a> {
     /// User-provided data for the request
-    pub request: IoVec<&'a [u8]>,
+    pub request: &'a [u8],
     /// Response data provided by the NSM pipeline
-    pub response: IoVec<&'a mut [u8]>,
+    pub response: &'a mut [u8],
 }
 
 /// Encode an NSM `Request` value into a vector.  
@@ -48,8 +80,8 @@ fn nsm_encode_request_to_cbor(request: Request) -> Vec<u8> {
 /// Decode an NSM `Response` value from a raw memory buffer.  
 /// *Argument 1 (input)*: The `iovec` holding the memory buffer.  
 /// *Returns*: The decoded NSM response.
-fn nsm_decode_response_from_cbor(response_data: &IoVec<&mut [u8]>) -> Response {
-    match serde_cbor::from_slice(response_data.as_slice()) {
+fn nsm_decode_response_from_cbor(response_data: &[u8]) -> Response {
+    match serde_cbor::from_slice(response_data) {
         Ok(response) => response,
         Err(_) => Response::Error(ErrorCode::InternalError),
     }
@@ -59,7 +91,8 @@ fn nsm_decode_response_from_cbor(response_data: &IoVec<&mut [u8]>) -> Response {
 /// *Argument 1 (input)*: The descriptor to the device file.  
 /// *Argument 2 (input/output)*: The message to be sent and updated via `ioctl()`.  
 /// *Returns*: The status of the operation.
-fn nsm_ioctl(fd: i32, message: &mut NsmMessage) -> Option<Errno> {
+#[cfg(feature = "nix")]
+fn nsm_ioctl(fd: i32, message: &mut NsmMessage) -> Option<i32> {
     let status = unsafe {
         ioctl(
             fd,
@@ -67,14 +100,13 @@ fn nsm_ioctl(fd: i32, message: &mut NsmMessage) -> Option<Errno> {
             message,
         )
     };
-    let errno = Errno::last();
 
     match status {
         // If ioctl() succeeded, the status is the message's response code
         0 => None,
 
         // If ioctl() failed, the error is given by errno
-        _ => Some(errno),
+        _ => Some(errno::errno()),
     }
 }
 
@@ -84,7 +116,7 @@ fn nsm_ioctl(fd: i32, message: &mut NsmMessage) -> Option<Errno> {
 /// *Argument 1 (input)*: The descriptor to the NSM device file.  
 /// *Argument 2 (input)*: The NSM request.  
 /// *Returns*: The corresponding NSM response from the driver.
-pub fn nsm_process_request(fd: i32, request: Request) -> Response {
+pub fn nsm_process_request<P: Platform>(fd: i32, request: Request) -> Response {
     let cbor_request = nsm_encode_request_to_cbor(request);
 
     // Check if the request is too large
@@ -94,22 +126,26 @@ pub fn nsm_process_request(fd: i32, request: Request) -> Response {
 
     let mut cbor_response: [u8; NSM_RESPONSE_MAX_SIZE] = [0; NSM_RESPONSE_MAX_SIZE];
     let mut message = NsmMessage {
-        request: IoVec::from_slice(&cbor_request),
-        response: IoVec::from_mut_slice(&mut cbor_response),
+        request: &cbor_request,
+        response: &mut cbor_response,
     };
-    let status = nsm_ioctl(fd, &mut message);
+    let status = P::nsm_ioctl(fd, &mut message);
 
     match status {
         None => nsm_decode_response_from_cbor(&message.response),
-        Some(errno) => match errno {
-            Errno::EMSGSIZE => Response::Error(ErrorCode::InputTooLarge),
-            _ => Response::Error(ErrorCode::InternalError),
-        },
+        Some(errno) => {
+            if errno == 90 {
+                Response::Error(ErrorCode::InputTooLarge)
+            } else {
+                Response::Error(ErrorCode::InternalError)
+            }
+        }
     }
 }
 
 /// NSM library initialization function.  
 /// *Returns*: A descriptor for the opened device file.
+#[cfg(feature = "nix")]
 pub fn nsm_init() -> i32 {
     let mut open_options = OpenOptions::new();
     let open_dev = open_options.read(true).write(true).open(DEV_FILE);
@@ -129,6 +165,7 @@ pub fn nsm_init() -> i32 {
 /// NSM library exit function.  
 /// *Argument 1 (input)*: The descriptor for the opened device file, as
 /// obtained from `nsm_init()`.
+#[cfg(feature = "nix")]
 pub fn nsm_exit(fd: i32) {
     let result = close(fd as RawFd);
     match result {

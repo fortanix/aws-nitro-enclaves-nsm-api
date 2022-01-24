@@ -7,4 +7,5 @@ lto = true
 
 [patch.crates-io]
 serde = { git = "https://github.com/fortanix/serde.git", branch = "master" }
+serde_cbor = { git = "https://github.com/fortanix/cbor.git", branch = "fortanixvme" }
 serde_bytes = { git = "https://github.com/fortanix/bytes.git", branch = "raoul/no_std_compatibility" }

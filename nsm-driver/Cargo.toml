@@ -1,6 +1,6 @@
 [package]
 name = "nsm-driver"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Petre Eftime <epetre@amazon.com>", "Andrei Trandafir <aatrand@amazon.com>"]
 edition = "2018"
 license = "Apache-2.0"
@@ -8,8 +8,16 @@ license = "Apache-2.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-nix = "0.20"
-libc = "0.2"
-log = "0.4"
+alloc = { version = "1.0.0", optional = true, package = "rustc-std-workspace-alloc" }
+compiler_builtins = { version = "0.1.0", optional = true }
+core = { version = "1.0.0", optional = true, package = "rustc-std-workspace-core" }
+nix = { version = "0.20", optional = true }
+libc = { version = "0.2", default-features = false }
+log = { version = "0.4", optional = true }
 serde_cbor = "0.11"
 nsm-io = { path = "../nsm-io" }
+
+[features]
+default = ["std"]
+std = ["nix", "log"]
+rustc-dep-of-std = ["core", "alloc", "compiler_builtins/rustc-dep-of-std", "libc/rustc-dep-of-std", "nsm-io/rustc-dep-of-std", "serde_cbor/rustc-dep-of-std"]
