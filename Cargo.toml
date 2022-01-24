@@ -4,3 +4,7 @@ default-members = [ "nsm-driver", "nsm-io", "nsm-lib", "nsm-test" ]
 
 [profile.release]
 lto = true
+
+[patch.crates-io]
+serde = { git = "https://github.com/fortanix/serde.git", branch = "master" }
+serde_bytes = { git = "https://github.com/fortanix/bytes.git", branch = "raoul/no_std_compatibility" }

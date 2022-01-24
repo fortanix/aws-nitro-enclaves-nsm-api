@@ -9,10 +9,22 @@
 //! a NitroSecureModule and the client using it. It uses CBOR to encode the data to allow
 //! easy IPC between components.
 
-// BTreeMap preserves ordering, which makes the tests easier to write
-use std::collections::{BTreeMap, BTreeSet};
-use std::io::Error as IoError;
-use std::result;
+#[cfg(not(feature = "std"))]
+extern crate alloc;
+
+#[cfg(feature = "std")]
+use {
+    // BTreeMap preserves ordering, which makes the tests easier to write
+    std::collections::{BTreeMap, BTreeSet},
+    std::io::Error as IoError,
+    std::result,
+};
+#[cfg(not(feature = "std"))]
+use {
+    alloc::collections::btree_map::BTreeMap,
+    alloc::collections::btree_set::BTreeSet,
+    core::result,
+};
 
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
@@ -23,7 +35,11 @@ use serde_cbor::{from_slice, to_vec};
 /// Possible error types return from this library.
 pub enum Error {
     /// An IO error of type `std::io::Error`
+    #[cfg(feature = "std")]
     Io(IoError),
+    #[cfg(not(feature = "std"))]
+    /// An IO error
+    Io(()),
     /// A CBOR ser/de error of type `serde_cbor::error::Error`.
     Cbor(CborError),
 }
@@ -31,6 +47,7 @@ pub enum Error {
 /// Result type return nsm-io::Error on failure.
 pub type Result<T> = result::Result<T, Error>;
 
+#[cfg(feature = "std")]
 impl From<IoError> for Error {
     fn from(error: IoError) -> Self {
         Error::Io(error)
