@@ -12,6 +12,7 @@
 //! the user, which then gets populated with information from the NSM driver and
 //! then decoded from CBOR.
 
+#![cfg_attr(feature = "rustc-dep-of-std", no_std)]
 use libc::ioctl;
 #[cfg(feature = "log")]
 use log::{debug, error};

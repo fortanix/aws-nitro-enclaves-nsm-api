@@ -1,6 +1,6 @@
 // Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-
+#![cfg_attr(feature = "rustc-dep-of-std", no_std)]
 #![deny(missing_docs)]
 #![allow(clippy::upper_case_acronyms)]
 //! NitroSecurityModule IO
