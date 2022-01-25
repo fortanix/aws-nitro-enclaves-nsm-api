@@ -18,11 +18,15 @@ use {
     std::collections::{BTreeMap, BTreeSet},
     std::io::Error as IoError,
     std::result,
+    std::string::String,
+    std::vec::Vec,
 };
 #[cfg(not(feature = "std"))]
 use {
     alloc::collections::btree_map::BTreeMap,
     alloc::collections::btree_set::BTreeSet,
+    alloc::string::String,
+    alloc::vec::Vec,
     core::result,
 };
 

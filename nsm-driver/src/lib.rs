@@ -29,7 +29,10 @@ use {
     std::fs::OpenOptions,
     std::mem,
     std::os::unix::io::{IntoRawFd, RawFd},
+    std::vec::Vec,
 };
+#[cfg(not(feature = "std"))]
+use alloc::vec::Vec;
 
 const DEV_FILE: &str = "/dev/nsm";
 const NSM_IOCTL_MAGIC: u8 = 0x0A;

@@ -8,7 +8,7 @@
 //! This module implements wrappers over the NSM Rust API which enable
 //! access to the API for non-Rust callers (ex.: C/C++ etc.).
 
-use nsm_driver::{nsm_exit, nsm_init, nsm_process_request};
+use nsm_driver::{Nix, nsm_exit, nsm_init, nsm_process_request};
 use nsm_io::{Digest, ErrorCode, Request, Response};
 use serde_bytes::ByteBuf;
 use std::ptr::copy_nonoverlapping;
@@ -71,7 +71,7 @@ pub unsafe extern "C" fn nsm_extend_pcr(
         data: data_vec.unwrap(),
     };
 
-    match nsm_process_request(fd, request) {
+    match nsm_process_request::<Nix>(fd, request) {
         Response::ExtendPCR { data: pcr } => nsm_get_raw_from_vec(&pcr, pcr_data, pcr_data_len),
         Response::Error(err) => err,
         _ => ErrorCode::InvalidResponse,
@@ -96,7 +96,7 @@ pub unsafe extern "C" fn nsm_describe_pcr(
 ) -> ErrorCode {
     let request = Request::DescribePCR { index };
 
-    match nsm_process_request(fd, request) {
+    match nsm_process_request::<Nix>(fd, request) {
         Response::DescribePCR {
             lock: pcr_lock,
             data: pcr_data,
@@ -117,7 +117,7 @@ pub unsafe extern "C" fn nsm_describe_pcr(
 pub extern "C" fn nsm_lock_pcr(fd: i32, index: u16) -> ErrorCode {
     let request = Request::LockPCR { index };
 
-    match nsm_process_request(fd, request) {
+    match nsm_process_request::<Nix>(fd, request) {
         Response::LockPCR => ErrorCode::Success,
         Response::Error(err) => err,
         _ => ErrorCode::InvalidResponse,
@@ -132,7 +132,7 @@ pub extern "C" fn nsm_lock_pcr(fd: i32, index: u16) -> ErrorCode {
 pub extern "C" fn nsm_lock_pcrs(fd: i32, range: u16) -> ErrorCode {
     let request = Request::LockPCRs { range };
 
-    match nsm_process_request(fd, request) {
+    match nsm_process_request::<Nix>(fd, request) {
         Response::LockPCRs => ErrorCode::Success,
         Response::Error(err) => err,
         _ => ErrorCode::InvalidResponse,
@@ -147,7 +147,7 @@ pub extern "C" fn nsm_lock_pcrs(fd: i32, range: u16) -> ErrorCode {
 pub extern "C" fn nsm_get_description(fd: i32, nsm_description: &mut NsmDescription) -> ErrorCode {
     let request = Request::DescribeNSM;
 
-    match nsm_process_request(fd, request) {
+    match nsm_process_request::<Nix>(fd, request) {
         Response::DescribeNSM {
             version_major,
             version_minor,
@@ -231,7 +231,7 @@ pub unsafe extern "C" fn nsm_get_attestation_doc(
         public_key: get_byte_buf_from_user_data(pub_key_data, pub_key_len),
     };
 
-    match nsm_process_request(fd, request) {
+    match nsm_process_request::<Nix>(fd, request) {
         Response::Attestation {
             document: attestation_doc,
         } => nsm_get_raw_from_vec(&attestation_doc, att_doc_data, att_doc_len),
@@ -250,7 +250,7 @@ pub unsafe extern "C" fn nsm_get_random(fd: i32, buf: *mut u8, buf_len: &mut usi
     if fd < 0 || buf.is_null() || buf_len == &0 {
         return ErrorCode::InvalidArgument;
     }
-    match nsm_process_request(fd, Request::GetRandom) {
+    match nsm_process_request::<Nix>(fd, Request::GetRandom) {
         Response::GetRandom { random } => {
             *buf_len = std::cmp::min(*buf_len, random.len());
             std::ptr::copy_nonoverlapping(random.as_ptr(), buf, *buf_len);

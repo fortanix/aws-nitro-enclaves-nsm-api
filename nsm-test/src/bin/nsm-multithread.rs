@@ -8,7 +8,7 @@
 //! This module implements a aggresive run-time test for the
 //! NSM Rust API.
 
-use nsm_driver::{nsm_exit, nsm_init, nsm_process_request};
+use nsm_driver::{Nix, nsm_exit, nsm_init, nsm_process_request};
 use nsm_io::{Request, Response};
 use serde_bytes::ByteBuf;
 use std::convert::TryInto;
@@ -36,7 +36,7 @@ fn extend_pcr(ctx: i32, j: usize) {
     // Extend the remaining PCRs multiple times.
     for _loop_idx in 0..2 {
         let data_copy = dummy_data.clone();
-        _response = nsm_process_request(
+        _response = nsm_process_request::<Nix>(
             ctx,
             Request::ExtendPCR {
                 index: pcr,
@@ -58,7 +58,7 @@ fn check_single_attestation(
     nonce: Option<ByteBuf>,
     public_key: Option<ByteBuf>,
 ) -> Result<(), ErrorCode> {
-    let response = nsm_process_request(
+    let response = nsm_process_request::<Nix>(
         ctx,
         Request::Attestation {
             user_data,

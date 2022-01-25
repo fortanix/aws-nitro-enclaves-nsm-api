@@ -14,11 +14,11 @@ log = { version = "0.4", optional = true }
 # https://github.com/rust-lang/wg-cargo-std-aware/issues/78
 serde = { git = "https://github.com/fortanix/serde.git", branch = "raoul/stdlib_1.0.136", default-features = false, features = ["derive"], optional = true }
 serde_bytes = { git = "https://github.com/fortanix/bytes.git", branch = "raoul/no_std_compatibility", default-features = false, optional = true }
-serde_cbor = { git = "https://github.com/fortanix/cbor.git", branch = "raoul/stdlib_serde_1.0.136", default-features = false, optional = true }
+serde_cbor = { git = "https://github.com/fortanix/cbor.git", branch = "raoul/stdlib_serde_1.0.136", default-features = false, features = ["alloc"], optional = true }
 
 [features]
 default = ["std"]
-std = ["serde", "serde_bytes", "serde_cbor"]
+std = ["serde", "serde_bytes", "serde_bytes/std", "serde_cbor", "serde_cbor/std"]
 rustc-dep-of-std = [
 	"alloc",
 	"compiler_builtins/rustc-dep-of-std",

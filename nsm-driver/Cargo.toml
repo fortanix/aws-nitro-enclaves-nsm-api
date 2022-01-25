@@ -14,11 +14,19 @@ core = { version = "1.0.0", optional = true, package = "rustc-std-workspace-core
 nix = { version = "0.20", optional = true }
 libc  = { git = "https://github.com/fortanix/libc.git", branch = "fortanixvme", default-features = false }
 log = { version = "0.4", optional = true }
-serde = { git = "https://github.com/fortanix/serde.git", branch = "raoul/stdlib_1.0.136", features = ["derive"], optional = true }
-serde_cbor = { git = "https://github.com/fortanix/cbor.git", branch = "raoul/stdlib_serde_1.0.136", optional = true }
-nsm-io = { path = "../nsm-io" }
+serde = { git = "https://github.com/fortanix/serde.git", branch = "raoul/stdlib_1.0.136", features = ["derive"], default-features = false, optional = true }
+serde_cbor = { git = "https://github.com/fortanix/cbor.git", branch = "raoul/stdlib_serde_1.0.136", default-features = false, optional = true }
+nsm-io = { path = "../nsm-io", default-features = false }
 
 [features]
 default = ["std"]
-std = ["nix", "log"]
-rustc-dep-of-std = ["core", "alloc", "compiler_builtins/rustc-dep-of-std", "libc/rustc-dep-of-std", "nsm-io/rustc-dep-of-std", "serde_cbor/rustc-dep-of-std"]
+std = ["nix", "log", "serde", "serde_cbor/std"]
+rustc-dep-of-std = [
+	"alloc",
+	"compiler_builtins/rustc-dep-of-std",
+	"core",
+	"libc/rustc-dep-of-std",
+	"nsm-io/rustc-dep-of-std",
+	"serde/rustc-dep-of-std",
+	"serde_cbor/rustc-dep-of-std",
+	]

@@ -7,7 +7,7 @@
 //! This module implements a comprehensive run-time test for the
 //! NSM Rust API.
 
-use nsm_driver::{nsm_exit, nsm_init, nsm_process_request};
+use nsm_driver::{Nix, nsm_exit, nsm_init, nsm_process_request};
 use nsm_io::{Digest, Request, Response};
 use serde_bytes::ByteBuf;
 use std::collections::BTreeSet;
@@ -35,7 +35,7 @@ struct NsmDescription {
 /// *Argument 1 (input)*: Context from `nsm_init()`.  
 /// *Returns*: A description structure.
 fn get_nsm_description(ctx: i32) -> NsmDescription {
-    let response = nsm_process_request(ctx, Request::DescribeNSM);
+    let response = nsm_process_request::<Nix>(ctx, Request::DescribeNSM);
     match response {
         Response::DescribeNSM {
             version_major,
@@ -81,7 +81,7 @@ fn check_initial_pcrs(ctx: i32, description: &NsmDescription) {
     // First, get the description of all available PCRs.
     let pcr_data: Vec<PcrData> = (0..description.max_pcrs)
         .map(|pcr| {
-            let response = nsm_process_request(ctx, Request::DescribePCR { index: pcr as u16 });
+            let response = nsm_process_request::<Nix>(ctx, Request::DescribePCR { index: pcr as u16 });
             match response {
                 Response::DescribePCR { lock, data } => {
                     assert_eq!(
@@ -174,7 +174,7 @@ fn check_pcr_locks(ctx: i32, description: &NsmDescription) {
 
     // Test that PCRs [0..16) cannot be locked.
     for index in 0..16 {
-        response = nsm_process_request(ctx, Request::LockPCR { index });
+        response = nsm_process_request::<Nix>(ctx, Request::LockPCR { index });
         match response {
             Response::Error(_) => (),
             _ => panic!(
@@ -190,7 +190,7 @@ fn check_pcr_locks(ctx: i32, description: &NsmDescription) {
     for loop_idx in 0..10 {
         for index in 16..description.max_pcrs {
             let data_copy = dummy_data.clone();
-            response = nsm_process_request(
+            response = nsm_process_request::<Nix>(
                 ctx,
                 Request::ExtendPCR {
                     index,
@@ -222,7 +222,7 @@ fn check_pcr_locks(ctx: i32, description: &NsmDescription) {
 
     // Lock all remaining PCRs.
     for index in 16..description.max_pcrs {
-        response = nsm_process_request(ctx, Request::LockPCR { index });
+        response = nsm_process_request::<Nix>(ctx, Request::LockPCR { index });
 
         match response {
             Response::LockPCR => (),
@@ -239,7 +239,7 @@ fn check_pcr_locks(ctx: i32, description: &NsmDescription) {
     );
 
     // Lock PCRs in a valid range.
-    response = nsm_process_request(ctx, Request::LockPCRs { range });
+    response = nsm_process_request::<Nix>(ctx, Request::LockPCRs { range });
     match response {
         Response::LockPCRs => (),
         _ => panic!(
@@ -250,7 +250,7 @@ fn check_pcr_locks(ctx: i32, description: &NsmDescription) {
 
     // Lock PCRs in an invalid range.
     range += 1;
-    response = nsm_process_request(ctx, Request::LockPCRs { range });
+    response = nsm_process_request::<Nix>(ctx, Request::LockPCRs { range });
     match response {
         Response::Error(_) => (),
         _ => panic!(
@@ -268,7 +268,7 @@ fn check_pcr_locks(ctx: i32, description: &NsmDescription) {
     // Attempt to extend locked PCRs.
     for index in 0..description.max_pcrs {
         let data_copy = dummy_data.clone();
-        response = nsm_process_request(
+        response = nsm_process_request::<Nix>(
             ctx,
             Request::ExtendPCR {
                 index,
@@ -293,7 +293,7 @@ fn check_pcr_locks(ctx: i32, description: &NsmDescription) {
     // Describe all PCRs multiple times.
     for loop_idx in 0..10 {
         for index in 0..description.max_pcrs {
-            response = nsm_process_request(ctx, Request::DescribePCR { index });
+            response = nsm_process_request::<Nix>(ctx, Request::DescribePCR { index });
 
             match response {
                 Response::DescribePCR { lock, data } => {
@@ -341,7 +341,7 @@ fn check_single_attestation(
     nonce: Option<ByteBuf>,
     public_key: Option<ByteBuf>,
 ) {
-    let response = nsm_process_request(
+    let response = nsm_process_request::<Nix>(
         ctx,
         Request::Attestation {
             user_data,
@@ -402,7 +402,7 @@ fn check_random(ctx: i32) {
     let mut prev_random: Vec<u8> = vec![];
 
     for _ in 0..16 {
-        match nsm_process_request(ctx, Request::GetRandom) {
+        match nsm_process_request::<Nix>(ctx, Request::GetRandom) {
             Response::GetRandom { random } => {
                 assert!(!random.is_empty());
                 assert!(prev_random != random);
