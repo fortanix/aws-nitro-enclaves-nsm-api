@@ -34,10 +34,10 @@ use {
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 
-const DEV_FILE: &str = "/dev/nsm";
-const NSM_IOCTL_MAGIC: u8 = 0x0A;
-const NSM_REQUEST_MAX_SIZE: usize = 0x1000;
-const NSM_RESPONSE_MAX_SIZE: usize = 0x3000;
+pub const DEV_FILE: &str = "/dev/nsm";
+pub const NSM_IOCTL_MAGIC: u8 = 0x0A;
+pub const NSM_REQUEST_MAX_SIZE: usize = 0x1000;
+pub const NSM_RESPONSE_MAX_SIZE: usize = 0x3000;
 
 pub trait Platform {
     fn open_dev() -> i32;
