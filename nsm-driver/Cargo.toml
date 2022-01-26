@@ -20,7 +20,7 @@ nsm-io = { path = "../nsm-io", default-features = false }
 
 [features]
 default = ["std"]
-std = ["nix", "log", "serde", "serde_cbor/std"]
+std = ["nix", "log", "serde", "serde_cbor/std", "nsm-io/std"]
 rustc-dep-of-std = [
 	"alloc",
 	"compiler_builtins/rustc-dep-of-std",
